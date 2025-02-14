@@ -1,0 +1,164 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\graphicspath{{images/}}
+\usepackage[a4paper, top=2cm, bottom=2cm, left=2cm, right=2cm]{geometry}  % Kenar boşluklarını ayarlamak için
+
+\title{Linux Çekirdek Modülü Ekleme}
+\author{Yusuf KAYA}
+\date{\today}
+
+% Kod gösterimi için renkleri tanımla
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\begin{document}
+
+% Başlık öncesinde dikey boşluk ekleyerek üst kısma daha yakın olmasını sağla
+\vspace*{-1.5cm}  % Bu değeri başlığı yukarı veya aşağı taşımak için ayarla
+\maketitle
+
+\begin{abstract}
+Bu belge, çekirdek günlüğüne mesajlar yazdıran basit bir çekirdek modülünün uygulanmasını açıklamaktadır. Bu tür modüller, çekirdek işlevselliğini dinamik olarak genişletmek için yaygın olarak kullanılır ve sistem yeniden başlatılmadan eklenip kaldırılabilir.
+\end{abstract}
+
+\section{Giriş}
+Çekirdek modülleri, ihtiyaç duyulduğunda çekirdeğe yüklenebilen veya çekirdekten kaldırılabilen kod parçalarıdır. Bu modüller, sistem yeniden başlatılmadan çekirdeğin işlevselliğini genişletmenin bir yolunu sunar ve genellikle sürücüler veya belirli sistem işlevleri gibi özel görevler için kullanılır. Bu belgede, temel bir çekirdek modülünün nasıl oluşturulacağı ve kullanılacağı gösterilmektedir.
+
+\section{Kod Uygulaması}
+
+Kod uygulaması, iki ana bölümden oluşmaktadır: modülün sisteme yüklendiği zaman çağrılan başlatma fonksiyonu ve modülün sistemden kaldırıldığında çağrılan çıkış fonksiyonu.
+
+\subsection{Başlatma Fonksiyonu}
+Başlatma fonksiyonu, çekirdek modülünün yüklendiği anda çalıştırılır ve modülün kurulum işlevlerini yerine getirir. Aşağıdaki kod örneği, basit bir başlatma fonksiyonunu göstermektedir. Bu fonksiyon, yüklenirken "Hello, World" mesajını çekirdek günlüğüne yazdırır.
+
+\begin{lstlisting}[language=C, caption={Başlatma fonksiyonu}]
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+
+static int __init modulismi_init(void) {
+    pr_info("Hello, World \n");
+    return 0;
+}
+
+module_init(modulismi_init);
+MODULE_DESCRIPTION("kernel module - baslangic");
+MODULE_AUTHOR("Me");
+MODULE_LICENSE("GPL");
+
+\end{lstlisting}
+
+\subsection{Çıkış Fonksiyonu}
+Çıkış fonksiyonu, çekirdek modülünün sistemden kaldırılmasından hemen önce çağrılır ve modülün kapatma işlemlerini gerçekleştirir. Aşağıdaki kod örneği, çıkış fonksiyonunun nasıl tanımlandığını göstermektedir. Bu fonksiyon, kaldırılma sırasında "Goodbye, World" mesajını çekirdek günlüğüne yazar.
+
+\begin{lstlisting}[language=C, caption={Çıkış fonksiyonu}]
+#include <linux/kernel.h>
+#include <linux/module.h>
+
+static void __exit modulismi_exit(void) {
+    pr_info("Goodbye, world \n");
+}
+
+module_exit(modulismi_exit);
+MODULE_DESCRIPTION("kernel module - cikis");
+MODULE_AUTHOR("Me");
+MODULE_LICENSE("GPL");
+\end{lstlisting}
+
+\subsection{Makefile}
+Çekirdek modülünü derlemek için kullanılan Makefile, çekirdek modülünün derleme sürecini otomatik hale getirir. Bu dosya, çekirdek yapı sistemine hangi dosyaların derleneceğini ve hangi yolların izleneceğini bildirir.
+
+\begin{lstlisting}[language=make, caption={Makefile}]
+# Makefile
+obj-m += modulismi.o
+yusufkaya-objs := modulismi_init.o modulismi_exit.o
+
+PWD := $(CURDIR)
+
+all:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+
+\end{lstlisting}
+
+\section{Adımlar}
+Bu çekirdek modülü, Linux çekirdeğinde modüllerin yüklenmesi ve kaldırılmasının temel yapısını ve işlevselliğini göstermektedir. Aşağıda, çekirdek modülünü oluşturmak ve çalıştırmak için gerekli adımlar yer almaktadır.
+
+\subsection{Kod Dosyalarını Oluşturma}
+Öncelikle, yukarıda verilen başlatma ve çıkış fonksiyonlarının kodlarını \textbf{aynı dizinde} oluşturuyoruz. Bu dosyalar, çekirdek modülümüzün kaynak kodunu içerir.
+
+\includegraphics[]{ls.png}
+
+\subsection{Headers Dosyalarını Güncelleme}
+Modülleri yüklerken herhangi bir hata ile karşılaşmamak için sistemde yüklü olan çekirdek sürümüne uygun olan \textbf{headers} dosyalarının yüklenmesi gerekmektedir. Aşağıda, farklı dağıtımlar için ilgili komutlar verilmiştir.
+\begin{itemize}
+    \item Debian tabanlı sistemler (örneğin, Ubuntu) için:
+    \begin{lstlisting}[language=shell, caption={Debian için }]
+    sudo apt-get install linux-headers-$(uname -r)\end{lstlisting}
+    \item Arch tabanlı sistemler için:
+    \begin{lstlisting}[language=shell, caption={Arch için }]
+    sudo pacman -S linux-headers\end{lstlisting}
+    
+    \item\ \includegraphics[width=\textwidth]{headers.png}
+    \caption{Headers dosyalarını yükleme örneği}
+    \label{fig:ornek_resim}
+\end{itemize}
+
+\subsection{Make Dosyasını Çalıştırma}
+Headers dosyaları doğru bir şekilde yüklendikten sonra, dosyaların bulunduğu dizinde Makefile dosyamızı çalıştırarak çekirdek modülünü derliyoruz.Başarıyla tamamlandığında,\textbf{modulismi.ko} adlı bir çekirdek modülü oluşturulacaktır.\par\vspace{1cm}
+\includegraphics[width=\textwidth]{make.png}
+\caption{Makefile çalıştırma örneği}
+
+\subsection{Modül Yükleme ve Kaldırma}
+Çekirdek modülü oluşturulduktan sonra, \textbf{insmod} komutuyla modül yüklenir. Eğer daha önce yüklenmiş olan bir modülü kaldırmak istersek, \textbf{rmmod} komutunu kullanırız.
+    \begin{lstlisting}[language=shell, caption={Modül yüklemek için }]
+    sudo insmod moduleismi.ko\end{lstlisting}
+    \begin{lstlisting}[language=shell, caption={Yüklü modülü kaldırmak için }]
+    sudo rmmod moduleismi.ko\end{lstlisting}
+
+\includegraphics[width=\textwidth]{ınsmod.png}
+\caption{Modül yükleme örneği}
+\par\vspace{1cm}
+
+Daha sonra, yüklenen modül tarafından oluşturulan çekirdek log mesajlarını görmek için \textbf{dmesg} komutunu kullanabiliriz. Örneğin, son 10 satırı bir dosyaya kaydetmek için şu komut kullanılır:
+    \begin{lstlisting}[language=shell, caption={dmesg çıktısının son 10 satırı out.txt'ye kaydedilir. }]
+    sudo dmesg | tail -10 > out.txt\end{lstlisting}
+
+\par\vspace{1cm}
+Örnek bir \textbf{out.txt} dosyası:
+\lstinputlisting{out.txt}
+\par\vspace{1cm}
+Son iki satırda da görüldüğü üzere modül yükleme ve çıkartma işlemleri başarıyla gerçekleşmiş.
+
+\end{document}
+
